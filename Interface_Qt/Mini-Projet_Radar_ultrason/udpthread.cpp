@@ -1,3 +1,8 @@
+/**
+ * @file udpthread.cpp
+ * @brief Implémentation du thread client UDP (validation IP/port, envoi avec 2 essais et timeout).
+ */
+
 #include "udpthread.h" // Inclut le fichier d'en-tete de notre classe UdpThread
 #include <QUdpSocket> // Inclut la classe QUdpSocket de Qt pour la communication UDP
 #include <QHostAddress> // Inclut la classe QHostAddress de Qt pour gerer l'adresse IP
@@ -7,7 +12,7 @@ UdpThread::UdpThread(QObject *parent) // Constructeur de la classe UdpThread
     : QThread{parent} // Appelle le constructeur de la classe mere QThread
 { // Debut du constructeur
     m_ip = "192.168.1.156"; // Initialise l'adresse IP par defaut a 192.168.1.156
-    m_port = 3500; // Initialise le port par defaut a 3500
+    m_port = 5000; // Initialise le port par defaut a 5000 (cahier des charges)
     m_commande = ""; // Initialise la commande avec un texte vide
 } // Fin du constructeur
 
