@@ -1,3 +1,8 @@
+/**
+ * @file mainwindow.h
+ * @brief Déclaration de la fenêtre principale Qt (contrôle angle, distance, scan UDP).
+ */
+
 #ifndef MAINWINDOW_H // Verifie si MAINWINDOW_H n'est pas encore defini (evite les inclusions multiples)
 #define MAINWINDOW_H // Definit MAINWINDOW_H pour la suite de la compilation
 
