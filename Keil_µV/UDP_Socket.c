@@ -14,8 +14,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-int32_t udp_sock;                       // Socket UDP sur le port 3500 (Interface Qt)
-int32_t udp_sock_cdc;                   // Socket UDP sur le port 5000 (Cahier des charges)
+int32_t udp_sock;                       // Socket UDP sur le port 5000 (Cahier des charges & Interface Qt)
 
 /*----------------------------------------------------------------------------
  *      Fonction utilitaire : Envoie une chaîne ASCII en UDP à l'expéditeur
@@ -189,16 +188,10 @@ void Init_Ethernet (void) {
 
   netInitialize ();
 
-  /* Ouvrir le port 3500 (utilisé par l'interface Qt) */
+  /* Ouvrir le port 5000 (cahier des charges et interface Qt) */
   udp_sock = netUDP_GetSocket (udp_cb_func);
   if (udp_sock > 0) {
-    netUDP_Open (udp_sock, UDP_PORT_QT);
-  }
-
-  /* Ouvrir également le port 5000 (mentionné dans le cahier des charges) */
-  udp_sock_cdc = netUDP_GetSocket (udp_cb_func);
-  if (udp_sock_cdc > 0) {
-    netUDP_Open (udp_sock_cdc, UDP_PORT_CDC);
+    netUDP_Open (udp_sock, UDP_PORT_CDC);
   }
 }
 
