@@ -1,0 +1,50 @@
+name: Normaliser les fins de ligne des sources Keil
+
+on:
+  push:
+    paths:
+      - '.github/workflows/normalize-keil-eol.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Normaliser uniquement les fichiers texte du projet Keil
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          extensions = {
+              ".c", ".cpp", ".h", ".s", ".txt", ".0", ".1",
+              ".uvprojx", ".uvoptx", ".appwizard", ".bat",
+              ".vcxproj", ".filters", ".sln", ".dbgconf", ".md",
+          }
+          updated = 0
+          for p in Path("Keil_µV").rglob("*"):
+              if not p.is_file() or p.suffix.lower() not in extensions:
+                  continue
+              data = p.read_bytes()
+              if b"\r\n" in data:
+                  p.write_bytes(data.replace(b"\r\n", b"\n"))
+                  updated += 1
+          print("Fichiers texte normalisés :", updated)
+          PY
+
+      - name: Enregistrer les corrections
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Keil_µV
+          if git diff --cached --quiet; then
+            echo "Toutes les fins de ligne sont déjà normalisées."
+          else
+            git commit -m "Normaliser les fins de ligne des ressources Keil"
+            git push origin HEAD:main
+          fi
