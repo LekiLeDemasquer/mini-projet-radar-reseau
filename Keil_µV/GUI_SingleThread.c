@@ -117,3 +117,4 @@ void Check_IP(void)
 		g_ui_refresh_req = 1;  /* Signale à l'IHM de rafraîchir IP, angle et distance */
 	}
 }
+
