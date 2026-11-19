@@ -45,7 +45,7 @@ jobs:
                       continue
                   if any(s in relative.parts for s in ("Objects","Listings")):
                       continue
-                  if target.suffix in (".uvguix", ".uvoptx"):
+                  if target.suffix == ".uvguix":
                       continue
                   target.parent.mkdir(parents=True, exist_ok=True)
                   target.write_bytes(z.read(f))
