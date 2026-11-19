@@ -53,7 +53,7 @@ void ID_SCREEN_00__ID_SWITCH_00__WM_NOTIFICATION_VALUE_CHANGED(APPW_ACTION_ITEM 
 		GPIOI->ODR &= ~(1<<1);
   }
 		//Val vaut 0 ou 1
-  //code ï¿½ exï¿½cuter ï¿½ mettre ici
+  //code à exécuter à mettre ici
 }
 
 /*********************************************************************
