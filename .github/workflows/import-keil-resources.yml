@@ -1,0 +1,67 @@
+name: Importer les ressources manquantes du template Keil
+
+on:
+  push:
+    paths:
+      - '.github/workflows/import-keil-resources.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  importer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Copier uniquement les fichiers absents
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path, PurePosixPath
+          import zipfile
+
+          archive = Path("projet_template.zip")
+          if not archive.is_file():
+              raise SystemExit("Archive projet_template.zip absente")
+          with zipfile.ZipFile(archive) as z:
+              all_files = [x for x in z.namelist() if not x.endswith("/")]
+              project_files = [x for x in all_files if x.endswith(".uvprojx")]
+              if not project_files:
+                  raise SystemExit("Aucun fichier .uvprojx dans le template : import non exécuté")
+              base = sorted((str(PurePosixPath(x).parent).rstrip("/") + "/" for x in project_files), key=len)[0]
+              print("Source :", base)
+              copied = skipped = 0
+              for f in all_files:
+                  if not f.startswith(base):
+                      continue
+                  relative = PurePosixPath(f[len(base):])
+                  if not relative.parts or ".." in relative.parts:
+                      continue
+                  target = Path("Keil_µV").joinpath(*relative.parts)
+                  if target.is_file():
+                      skipped += 1
+                      continue
+                  if any(s in relative.parts for s in ("Objects","Listings")):
+                      continue
+                  if target.suffix in (".uvguix", ".uvoptx"):
+                      continue
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  target.write_bytes(z.read(f))
+                  copied += 1
+              print(f"Fichiers copiés : {copied} ; conservés : {skipped}")
+          PY
+
+      - name: Enregistrer les fichiers ajoutés
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Keil_µV
+          if git diff --cached --quiet; then
+            echo "Rien à ajouter."
+          else
+            git commit -m "Importer les dépendances Keil manquantes depuis projet_template.zip"
+            git push origin HEAD:main
+          fi
