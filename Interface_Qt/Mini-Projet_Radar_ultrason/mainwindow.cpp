@@ -1,3 +1,8 @@
+/**
+ * @file mainwindow.cpp
+ * @brief Implémentation de l'interface utilisateur Qt pour piloter le radar STM32F746 via UDP.
+ */
+
 #include "mainwindow.h" // Inclut le fichier d'en-tete de notre fenetre MainWindow
 #include "ui_mainwindow.h" // Inclut le fichier genere automatiquement par Qt a partir de mainwindow.ui
 
