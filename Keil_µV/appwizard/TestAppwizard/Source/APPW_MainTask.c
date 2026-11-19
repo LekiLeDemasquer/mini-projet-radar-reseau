@@ -16,6 +16,9 @@ Purpose     : APPWIZARD application entry point
 
 #include "Generated/Resource.h"
 
+extern volatile int g_ui_refresh_req;
+extern void GUI_Refresh_Status(void);
+
 /*********************************************************************
 *
 *       MainTask
@@ -41,6 +44,10 @@ void MainTask(void) {
   // ...and keep it alive
   //
   while (1) {
+    if (g_ui_refresh_req) {
+      GUI_Refresh_Status();
+      g_ui_refresh_req = 0;
+    }
     while (GUI_Exec1()) {
       APPW_Exec();
     }
