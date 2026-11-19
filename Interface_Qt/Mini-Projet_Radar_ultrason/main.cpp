@@ -1,3 +1,8 @@
+/**
+ * @file main.cpp
+ * @brief Point d'entrée de l'interface graphique Qt du Radar à ultrasons.
+ */
+
 #include "mainwindow.h" // Inclut la declaration de notre fenetre principale MainWindow
 
 #include <QApplication> // Inclut la classe QApplication qui gere l'application Qt
