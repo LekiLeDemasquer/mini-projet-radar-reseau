@@ -38,18 +38,19 @@ DMA2D_HandleTypeDef hdma2d;
 
 #ifdef RTE_CMSIS_RTOS2_RTX5
 /**
-  * Override default HAL_GetTick function
+  * @brief  Surcharge de HAL_GetTick() pour utiliser le compteur de ticks du RTOS RTX5.
+  *         Avant le démarrage du noyau (osKernelStart), utilise une boucle NOP
+  *         d'environ 1 ms pour les délais d'initialisation HAL.
   */
 uint32_t HAL_GetTick (void) {
   static uint32_t ticks = 0U;
          uint32_t i;
 
   if (osKernelGetState () == osKernelRunning) {
-    return ((uint32_t)osKernelGetTickCount ());
+    return ((uint32_t)osKernelGetTickCount ()); /* Tick exact du noyau RTX5 (1 ms) */
   }
 
-  /* If Kernel is not running wait approximately 1 ms then increment 
-     and return auxiliary tick counter value */
+  /* Avant démarrage du RTOS : temporisation logicielle approximative de 1 ms */
   for (i = (SystemCoreClock >> 14U); i > 0U; i--) {
     __NOP(); __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
     __NOP(); __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
@@ -58,7 +59,7 @@ uint32_t HAL_GetTick (void) {
 }
 
 /**
-  * Override default HAL_InitTick function
+  * @brief  Surcharge de HAL_InitTick() : inutile car SysTick est géré par RTX5.
   */
 HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority) {
   
@@ -126,95 +127,72 @@ static void MX_DMA2D_Init(void)
 /* Private functions ---------------------------------------------------------*/
 
 /**
-  * @brief  Main program
-  * @param  None
-  * @retval None
+  * @brief  Initialisation bas niveau du STM32F746NGH :
+  *         - Configuration MPU (protection mémoire SRAM et SDRAM)
+  *         - Activation des caches L1 (Instructions + Données)
+  *         - Initialisation HAL et SDRAM externe (pour le framebuffer LCD)
+  *         - Configuration de l'horloge système à 200 MHz
   */
 void configuration_overclock(void)
 {
-  /* This project template calls firstly two functions in order to configure MPU feature 
-     and to enable the CPU Cache, respectively MPU_Config() and CPU_CACHE_Enable().
-     These functions are provided as template implementation that User may integrate 
-     in his application, to enhance the performance in case of use of AXI interface 
-     with several masters. */ 
-  
-  /* Configure the MPU attributes as Write Through */
+  /* Configure la MPU en mode Write-Through pour la cohérence cache/DMA */
   MPU_Config();
 
-  /* Enable the CPU Cache */
+  /* Active les caches L1 I-Cache et D-Cache du Cortex-M7 */
   CPU_CACHE_Enable();
 
-  /* STM32F7xx HAL library initialization:
-       - Configure the Flash ART accelerator on ITCM interface
-       - Configure the Systick to generate an interrupt each 1 msec
-       - Set NVIC Group Priority to 4
-       - Low Level Initialization
-     */
+  /* Initialise la couche HAL (ART Accelerator, priorité NVIC groupe 4, MSP) */
   HAL_Init();
 	
-  /* Initialize BSP SDRAM */
+  /* Initialise la SDRAM externe (utilisée par l'écran LCD LTDC/emWin) */
   BSP_SDRAM_Init();
 	
-	//MX_DMA2D_Init();
-  /* Configure the System clock to have a frequency of 216 MHz */
+  //MX_DMA2D_Init();
+  /* Configure les PLL pour cadencer le système à 200 MHz */
   SystemClock_Config();
   SystemCoreClockUpdate();
-
 }
 
 /**
-  * @brief  System Clock Configuration
-  *         The system Clock is configured as follow : 
-  *            System Clock source            = PLL (HSE)
-  *            SYSCLK(Hz)                     = 200000000
-  *            HCLK(Hz)                       = 200000000
-  *            AHB Prescaler                  = 1
-  *            APB1 Prescaler                 = 4
-  *            APB2 Prescaler                 = 2
-  *            HSE Frequency(Hz)              = 25000000
-  *            PLL_M                          = 25
-  *            PLL_N                          = 400
-  *            PLL_P                          = 2
-  *            PLL_Q                          = 9
-  *            VDD(V)                         = 3.3
-  *            Main regulator output voltage  = Scale1 mode
-  *            Flash Latency(WS)              = 7
-  * @param  None
-  * @retval None
+  * @brief  Configuration de l'horloge système (PLL) :
+  *            Source PLL         = HSE (quartz externe 25 MHz)
+  *            SYSCLK / HCLK      = 200 MHz (25 / 25 * 400 / 2)
+  *            APB1 (TIM6, DAC)   = 50 MHz  (horloge timers APB1 = 100 MHz)
+  *            APB2 (TIM10, ADC3) = 100 MHz (horloge timers APB2 = 200 MHz)
+  *            Latence Flash      = 7 Wait States
   */
 static void SystemClock_Config(void)
 {
   RCC_ClkInitTypeDef RCC_ClkInitStruct;
   RCC_OscInitTypeDef RCC_OscInitStruct;
 
-  /* Enable HSE Oscillator and activate PLL with HSE as source */
+  /* Active l'oscillateur externe HSE (25 MHz) et la PLL */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_OFF;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 25U;
-  RCC_OscInitStruct.PLL.PLLN = 400U;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLM = 25U;  /* 25 MHz / 25 = 1 MHz en entrée VCO */
+  RCC_OscInitStruct.PLL.PLLN = 400U; /* 1 MHz * 400 = 400 MHz */
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2; /* 400 MHz / 2 = 200 MHz SYSCLK */
   RCC_OscInitStruct.PLL.PLLQ = 9U;
   if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
   }
 
-  /* activate the OverDrive to reach the 216 Mhz Frequency */
+  /* Active le mode OverDrive nécessaire pour les fréquences >= 180 MHz */
   if(HAL_PWREx_EnableOverDrive() != HAL_OK)
   {
     Error_Handler();
   }
 
-  /* Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2 
-     clocks dividers */
+  /* Sélectionne la PLL comme horloge système et configure les diviseurs AHB/APB */
   RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;  /* HCLK  = 200 MHz */
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;   /* PCLK1 = 50 MHz  */
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;   /* PCLK2 = 100 MHz */
   if(HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_7) != HAL_OK)
   {
     Error_Handler();
@@ -309,7 +287,7 @@ static void CPU_CACHE_Enable(void)
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
   * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
+  * @param  line: assert_param line source number
   * @retval None
   */
 void assert_failed(uint8_t* file, uint32_t line)
@@ -331,4 +309,5 @@ void assert_failed(uint8_t* file, uint32_t line)
 /**
   * @}
   */ 
+
 
